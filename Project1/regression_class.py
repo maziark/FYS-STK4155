@@ -7,6 +7,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
+from imageio import imread
+from mpl_toolkits.mplot3d import Axes3D
 np.random.seed(4155)
 
 def franke_function(x, y):
@@ -133,7 +135,7 @@ class OLSClass:
 
     def Lasso(self, X, a, expected_value):
         #self.X = design_poly_matrix(x, y, self.degree)
-        clf = linear_model.Lasso(alpha=a, fit_intercept=False)
+        clf = linear_model.Lasso(alpha=a, fit_intercept=False, max_iter=1000)
         clf.fit(X, expected_value)
         self.beta_Lasso = clf.coef_
         self.clf_Lasso = clf
@@ -236,6 +238,23 @@ def franke_data ():
     
     return row_arr, col_arr, z_arr
 
+def terrain_data(row_size, col_size):
+    terrain = imread('SRTM_data_Norway_1.tif')
+    row_len, col_len = np.shape(terrain)
+    
+    row = np.linspace(0, 1, row_size)
+    col = np.linspace(0, 1, col_size)
+    
+    colmat, rowmat = np.meshgrid(col, row)
+    
+    z = terrain[:row_size, :col_size]
+    
+    row_arr = rowmat.ravel()
+    col_arr = colmat.ravel()
+    z_arr = z.ravel()
+    
+    return row_arr, col_arr, z_arr
+
 def testOLS(n,  row_arr, col_arr, z_arr):
     
     bias_values = []
@@ -299,8 +318,8 @@ def plot_MSE(n):
     plt.show()
  
 def testRidge(n, row_arr, col_arr, z_arr):
-    len_lambda = 100
-    lambda_start, lambda_end = 1e-10, 1e0
+    len_lambda = 10
+    lambda_start, lambda_end = 1e-10, 10e-2
     lambda_set = np.linspace(lambda_start, lambda_end, len_lambda)
     bias_values = np.zeros((n, len_lambda))
     var_values =  np.zeros((n, len_lambda))
@@ -385,6 +404,42 @@ def testLasso(n, row_arr, col_arr, z_arr):
     
     return bias_values, var_values, MSE_values, R2_values
 
+def testLassoAlpha(n, row_arr, col_arr, z_arr):
+    len_lambda = 10
+    lambda_start, lambda_end = 1e-10, 0.02
+    lambda_set = np.linspace(lambda_start, lambda_end, len_lambda)
+
+    MSE_values =  []
+    R2_values =  []
+    
+    degree = n
+    
+    OLS_object = OLSClass(row_arr, col_arr, z_arr, degree)
+    OLS_object.X = design_poly_matrix(row_arr, col_arr, degree)
+    OLS_object.resample()
+    for i in range(len_lambda):
+        beta = OLS_object.Lasso(OLS_object.X_train, lambda_set[i], OLS_object.Z_train)
+        z_predict = OLS_object.predict(OLS_object.X_test, 'Lasso')
+        
+        MSE_values.append(MSE(OLS_object.Z_test, z_predict))
+        R2_values.append(R2(OLS_object.Z_test, z_predict))
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+
+    ax.plot(lambda_set, MSE_values, label='MSE')
+    #ax.plot(lambda_set, R2_values, label='R2')
+    
+    ax.set_xlabel('Alpha')
+    ax.set_ylabel('MSE')
+    
+    ax.legend()
+    plt.title("Optimizing Lasso Terrain data")
+    plt.show()
+    
+    
+    return MSE_values, R2_values
+
 
 def testAll(n,  row_arr, col_arr, z_arr):
     
@@ -392,8 +447,8 @@ def testAll(n,  row_arr, col_arr, z_arr):
     MSE_values_Ridge = []
     MSE_values_OLS = []
     
-    l = 0.001
-    alpha = 0.01
+    l = 0.002
+    alpha = 0.001
     for i in range(n):
         OLS_object = OLSClass(row_arr, col_arr, z_arr, i)
         OLS_object.X = design_poly_matrix(row_arr, col_arr, i)
@@ -427,14 +482,73 @@ def testAll(n,  row_arr, col_arr, z_arr):
     plt.show()
     return MSE_values_OLS, MSE_values_Ridge, MSE_values_Lasso
 
+def testOLS_kfold_(n, row_arr, col_arr, z_arr, ax):
+    
+    bias_values = []
+    var_values = []
+    MSE_values = []
+    R2_values = []
+    degree = 11
+    for i in range(2, n):
+        OLS_object = OLSClass(row_arr, col_arr, z_arr, i)
+        OLS_object.X = design_poly_matrix(row_arr, col_arr, degree)
+        beta, MSE_score,R2_score =  OLS_object.apply_k_fold(4)
+        MSE_values.append(min(MSE_score))
+        R2_values.append(min(R2_score))
+        
+    
+    ax.plot(list(range(2, n)), MSE_values, label='MSE-k-fold')
+    ax.plot(list(range(2, n)), R2_values, label='R2-k-fold')
+   
+        
+    return bias_values, var_values, MSE_values, R2_values
 
+def testOLS_(n,  row_arr, col_arr, z_arr, ax):
+    
+    bias_values = []
+    var_values = []
+    MSE_values = []
+    R2_values = []
+    for i in range(1, n):
+        OLS_object = OLSClass(row_arr, col_arr, z_arr, i)
+        OLS_object.X = design_poly_matrix(row_arr, col_arr, i)
+        OLS_object.resample()
+        
+        beta = OLS_object.OLS(OLS_object.X_train, OLS_object.Z_train)
+        z_predict = OLS_object.predict(OLS_object.X_test)
+        
+        bias_values.append(bias(OLS_object.Z_test, z_predict))
+        var_values.append(var(z_predict))
+        MSE_values.append(MSE(OLS_object.Z_test, z_predict))
+        R2_values.append(R2(OLS_object.Z_test, z_predict))
 
+    ax.plot(list(range(1, n)), MSE_values, label='MSE-split')
+    ax.plot(list(range(1, n)), R2_values, label='R2-split')        
+        
+    return bias_values, var_values, MSE_values, R2_values
+
+def k_fold_vs_split():
+    x, y, z =  franke_data()
+    x1, y1, z1 = terrain_data(400, 200)
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    #testOLS_(15, x, y, z, ax)
+    testOLS_(15, x1, y1, z1, ax)
+    #testOLS_kfold_(12, x, y, z, ax)
+    ax.set_xlabel('degree of P')
+    ax.set_ylabel('MSE')
+    plt.title('Finding the suitable polynomial degree(OLS)')
+    ax.legend()
+    plt.show()
+    
 def plot_ridge_test():
     x, y, z =  franke_data()
-    #testRidge(14, x, y, z)
-    #testLasso(14, x, y, z)
-    testAll(30, x, y, z)
-    
+    x1, y1, z1 = terrain_data(400, 200)
+    #testRidge(15, x1, y1, z1)
+    #testLasso(15, x1, y1, z1)
+    #testAll(20, x1, y1, z1)
+    testLassoAlpha(11, x1, y1, z1)
+    #k_fold_vs_split()
     
     
     
