@@ -89,7 +89,7 @@ class NeuralNetwork:
             layer.betas += layer.delta * current_input.T * self.eta
             current_input = np.atleast_2d(layer.next)
 
-    def iterate(self, X, Y, max_iter=1000):
+    def iterate(self, X, Y, max_iter=10000):
         mse = []
         for i in range(max_iter):
             for j in range(len(X)):
@@ -110,6 +110,18 @@ class NeuralNetwork:
 
         return result_index
 
+    def confusion_matrix(self, X, Y):
+        confused_matrix = np.zeros((2, Y.shape[1]))
+        for i in range(len(X)):
+            actual = np.argmax(Y[i])
+            predicted = self.predict(np.array(X[i]))
+
+            if actual == predicted:
+                confused_matrix[0][actual] += 1
+            else:
+                confused_matrix[1][actual] += 1
+
+        print(confused_matrix)
 
 '''X = [[0, 0], [0, 1], [1, 0], [1, 1]]
 Y = [[1, 0], [1, 0], [1, 0], [0, 1]]
