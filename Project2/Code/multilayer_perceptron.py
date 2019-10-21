@@ -89,7 +89,7 @@ class NeuralNetwork:
             layer.betas += layer.delta * current_input.T * self.eta
             current_input = np.atleast_2d(layer.next)
 
-    def iterate(self, X, Y, max_iter=10000):
+    def iterate(self, X, Y, max_iter=1000):
         mse = []
         for i in range(max_iter):
             for j in range(len(X)):
