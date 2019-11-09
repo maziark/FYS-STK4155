@@ -1,17 +1,15 @@
-import pandas as pd
 import os
-import numpy as np
 import random
 
-from sklearn.model_selection import train_test_split
+import numpy as np
+import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
-
-from multilayer_perceptron import *
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import matplotlib.pyplot as plt
+from Project2.Code.logistic_regression import LogisticRegression as LR
 
 # Trying to set the seed
 np.random.seed(0)
@@ -20,7 +18,7 @@ random.seed(0)
 
 # Reading file into data frame
 cwd = os.getcwd()
-filename = cwd + '/credit_card_data.xls'
+filename = cwd + '/../data/credit_card_data.xls'
 nanDict = {}
 df = pd.read_excel(filename, header=1, skiprows=0, index_col=0, na_values=nanDict)
 
@@ -93,14 +91,16 @@ scoring = ['accuracy', 'roc_auc']
 logReg = LogisticRegression()
 # TRain
 logReg.fit(XTrain, yTrain)
+myLR = LR()
 print(logReg.score(XTest, yTest))
+myLR.train(XTrain, yTrain.reshape(-1, 1), XTest, yTest.reshape(-1, 1))
+print("hello")
+# gridSearch = GridSearchCV(logReg, parameters, cv=5, scoring=scoring, refit='roc_auc')
 
-gridSearch = GridSearchCV(logReg, parameters, cv=5, scoring=scoring, refit='roc_auc')
-
-mlp = NeuralNetwork([25, 50, 30, 1], 0.001)
+"""mlp = NeuralNetwork([25, 50, 30, 1], 0.001)
 mse = mlp.iterate(XTrain, yTrain, 100)
-
-plt.plot(mse)
+"""
+plt.plot(myLR.cost_values)
 plt.title('Changes in MSE')
 plt.xlabel('Epoch (every 10th)')
 plt.ylabel('MSE')

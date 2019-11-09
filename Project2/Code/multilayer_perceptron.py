@@ -1,15 +1,33 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
-np.random.seed(0)
+
+# np.random.seed(1340)
 
 
-def activation_function(values):
+def activation_sigmoid(values):
     return 1.0 / (1 + np.exp(values))
 
 
-def der_activation_function(values):
+def der_activation_sigmoid(values):
     return values * (1 - values)
+
+
+def activation_linear(values):
+    return values
+
+
+def der_activation_linear(values):
+    return values
+
+
+def activation_tanh(values):
+    return np.tanh(values)
+
+
+def der_activation_tanh(values):
+    return 1. / (np.cosh(values) ** 2)
 
 
 def MSE(x, x_):
@@ -25,13 +43,14 @@ def MSE(x, x_):
 
 
 class Layer:
-    def __init__(self, input_size, node_size, weights_initial=None, bias=None):
+    def __init__(self, input_size, node_size, weights_initial=None, bias=None, activation='sigmoid'):
         self.next = None
         self.error = None
         self.delta = None
         self.number_of_inputs = input_size
         self.number_of_nodes = node_size
         self.betas = weights_initial
+        self.activation = activation
         if weights_initial is None:
             self.betas = np.random.rand(input_size, node_size)
 
@@ -40,25 +59,37 @@ class Layer:
             self.bias = np.random.rand(node_size)
 
     def forward(self, values):
-        self.next = activation_function(
-            np.dot(values, self.betas) + self.bias)
+        tmp = np.dot(values, self.betas) + self.bias
+        self.next = eval('activation_{}({})'.format(self.activation, tmp))
         return self.next
 
     def backward(self, values):
-        return der_activation_function(values)
+        return eval('der_activation_{}({})'.format(self.activation, values))
 
 
 class NeuralNetwork:
     def __init__(self, hidden_layers, learning_rate, epsilon=0):
         self.epsilon = epsilon
         self.layers = []
+        self.hidden_layers = hidden_layers
         self.eta = learning_rate
 
-        self.design(hidden_layers)
+    def run(self, X, Y, X_test, Y_test, iter=20):
+        tmp_layers = []
+        tmp_error = []
+
+        for i in range(iter):
+            self.layers = self.design(self.hidden_layers)
+            tmp_error.append(self.iterate(X, Y, X_test, Y_test))
+            tmp_layers.append(self.layers)
+        self.layers = tmp_layers[np.array(tmp_error).argmin()]
+        return tmp_error
 
     def design(self, hidden_layers):
+        layers = []
         for i in range(1, len(hidden_layers)):
-            self.layers.append(Layer(hidden_layers[i - 1], hidden_layers[i]))
+            layers.append(Layer(hidden_layers[i - 1], hidden_layers[i]))
+        return layers
 
     def forward(self, values):
         for layer in self.layers:
@@ -89,39 +120,49 @@ class NeuralNetwork:
             layer.betas += layer.delta * current_input.T * self.eta
             current_input = np.atleast_2d(layer.next)
 
-    def iterate(self, X, Y, max_iter=10000):
-        mse = []
-        for i in range(max_iter):
-            for j in range(len(X)):
-                self.backpropagation(np.array(X[j]), np.array(Y[j]))
-                pred = self.layers[-1].next
-            mse.append(np.mean(np.square(np.array(Y[j]) - pred)))
+    def iterate(self, X, Y, X_test, Y_test, max_iter=1000):
+        count_iter = 0
+        error = [float('inf')]
+        order = list(range(0, len(X)))
+        while max_iter > count_iter:
+            count_iter += 1
+            random.shuffle(order)
 
-            if i > 100 and abs(mse[-1] - mse[-2]) <= self.epsilon:
+            for j in order:
+                self.backpropagation(np.array(X[j]), np.array(Y[j]))
+
+            output = [self.forward(np.array(x)) for x in X_test]
+            error.append(0.5 * sum([sum(output[i] - Y_test[i]) ** 2.0 for i in range(len(Y_test))]))
+            if error[-1] > error[-2]:
                 break
-        return mse
+
+        return error
 
     def predict(self, X):
-        pred = self.forward(X)
-        result_index = 0
-        for i in range(len(pred)):
-            if pred[i] > pred[result_index]:
-                result_index = i
+        single_flag = False
+        if not isinstance(X, list):
+            X = [X]
+            single_flag = True
 
-        return result_index
+        result = []
+        for x in X:
+            pred = self.forward(np.array(x))
+            result.append(np.argmax(pred))
+        if single_flag:
+            result = result[0]
+
+        return result
 
     def confusion_matrix(self, X, Y):
-        confused_matrix = np.zeros((2, Y.shape[1]))
+        confused_matrix = np.zeros((Y.shape[1], Y.shape[1]))
         for i in range(len(X)):
             actual = np.argmax(Y[i])
             predicted = self.predict(np.array(X[i]))
 
-            if actual == predicted:
-                confused_matrix[0][actual] += 1
-            else:
-                confused_matrix[1][actual] += 1
+            confused_matrix[predicted][actual] += 1
 
         print(confused_matrix)
+
 
 '''X = [[0, 0], [0, 1], [1, 0], [1, 1]]
 Y = [[1, 0], [1, 0], [1, 0], [0, 1]]

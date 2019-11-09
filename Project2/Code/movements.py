@@ -6,6 +6,7 @@
 '''
 # Feel free to use numpy in your MLP if you like to.
 import numpy as np
+import matplotlib.pyplot as plt
 
 from Project2.Code.multilayer_perceptron import NeuralNetwork
 
@@ -57,9 +58,15 @@ hidden = 12
 net = NeuralNetwork([40, 12, 8], 0.001)
 
 X, Y = train, train_targets,
-net.iterate(X, Y)
+error = net.run(X, Y, test, test_targets, 10)
 
 net.confusion_matrix(test, test_targets)
+err = [min(e) for e in error]
+plt.plot(err)
+plt.title('Changes in MSE')
+plt.xlabel('Epoch (every 10th)')
+plt.ylabel('MSE')
+plt.show()
 # Run training:
 # net.earlystopping(train, train_targets, valid, valid_targets)
 # NOTE: You can also call train method from here,
