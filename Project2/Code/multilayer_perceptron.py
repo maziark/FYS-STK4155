@@ -39,6 +39,19 @@ def MSE(x, x_):
 
 
 class Layer:
+    """
+    Each Layer works as a seperate object, it has the number of inputs,
+    and the number of output edges.
+
+    The activation function for each Layer can be individually selected.
+
+    Since this class is meant to be a private class, the main program can use
+    the implemented new_layer function to feed the design of the neural network,
+    using dictionaries as arguments.
+
+    Each Layer will keep track of its error rate, and delta (which are used
+    to help with finding the required changes in the same iteration)
+    """
     def __init__(self, input_size, node_size, activation='sigmoid'):
         # Statistics
         self.result = None
@@ -56,11 +69,18 @@ class Layer:
         self.betas = np.random.rand(input_size, node_size)
 
     def forward(self, values):
+        # gets the input, applied the weights, and run the activation
         tmp = np.dot(values, self.betas) + self.bias
         self.result = self.activate(tmp)
         return self.result
 
     def activate(self, value):
+        """
+        :param value: the result of the feed forward
+        :return: activated result, based of the chosen activation function
+
+        TODO: Check for lower cases
+        """
         # sigmoid:
         if 'sig' in self.activation:
             return activation_sigmoid(value)
@@ -74,6 +94,10 @@ class Layer:
             return value
 
     def backward(self, value):
+        """
+        This will apply the derivative of the selected activation function
+        """
+
         # sigmoid:
         if 'sig' in self.activation:
             return der_activation_sigmoid(value)
@@ -99,16 +123,35 @@ class NeuralNetwork:
         self.eta = learning_rate
 
     def new_layer(self, design):
+        """
+        :param design: is a dictionary of type
+            {'input_size': number of inputs,
+            'number_of_nodes': number of inputs for the next layer,
+            'activation_function': activation function (sigmoid, linear, tanh)
+            }
+        :return: None
+        """
         self.layers.append(Layer(design['input_size'], design['number_of_nodes'], design['activation_function']))
 
     def forward(self, x_train):
+        """
+        Uses the forward function in each Layer to find the final result
+
+        :param x_train: X values
+        :return: the result of the NeuralNetwork
+        """
         next_input = x_train
         for layer in self.layers:
             next_input = layer.forward(next_input)
 
         return next_input
 
-    def predict(self, x):
+    def predict_class(self, x):
+        """
+        Should only be used if the NeuralNetwork is used for classification problems, not regression
+        :param x: input
+        :return: index of the most probable outcome
+        """
         result = self.forward(x)
 
         if result.ndim == 1:
@@ -118,6 +161,13 @@ class NeuralNetwork:
             return np.argmax(result, axis=1)
 
     def backward(self, x_train, y_train):
+        """
+        :param x_train: inputs of the training set
+        :param y_train: expected output
+        :return: None
+
+        Uses the backward function in each Layer to simplify the process
+        """
         result = self.forward(x_train)
         number_layers = len(self.layers)
         for i in reversed(range(number_layers)):
@@ -140,6 +190,16 @@ class NeuralNetwork:
             self.layers[i].betas += self.layers[i].delta * tmp_x.T * self.eta
 
     def train(self, x_train, y_train):
+        """
+        :param x_train: input values
+        :param y_train: expected outcome
+        :return: None
+
+        Shuffles the data, selects 20% of the training data for validation.
+        The validation set is used to find the MSE score.
+
+        If the tolerance rate is set, it can end before going through all the iterations.
+        """
 
         for i in range(self.max_iter):
             tmp_x_train, tmp_y_train = shuffle(x_train, y_train, random_state=0)
@@ -153,3 +213,8 @@ class NeuralNetwork:
 
             if i > 10 and abs(self.mse_score[-1] - self.mse_score[-2]) <= self.epsilon:
                 break
+
+    def accuracy(self, x_test, y_test):
+        result = self.forward(x_test) > 0.5
+        return np.sum(result == y_test) / len(y_test)
+
