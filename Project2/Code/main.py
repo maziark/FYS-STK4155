@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 from Project2.Code.logistic_regression import LogisticRegression as LR
 
 # Trying to set the seed
+from Project2.Code.neural_network import NeuralNetwork, Layer
+from Project2.Code.multilayer_perceptron import NeuralNetwork as NN
+
 np.random.seed(0)
 
 random.seed(0)
@@ -93,14 +96,25 @@ logReg = LogisticRegression()
 logReg.fit(XTrain, yTrain)
 myLR = LR()
 print(logReg.score(XTest, yTest))
-myLR.train(XTrain, yTrain.reshape(-1, 1), XTest, yTest.reshape(-1, 1))
+# myLR.train(XTrain, yTrain.reshape(-1, 1), XTest, yTest.reshape(-1, 1))
 print("hello")
 # gridSearch = GridSearchCV(logReg, parameters, cv=5, scoring=scoring, refit='roc_auc')
 
-"""mlp = NeuralNetwork([25, 50, 30, 1], 0.001)
-mse = mlp.iterate(XTrain, yTrain, 100)
-"""
-plt.plot(myLR.cost_values)
+mlp = NeuralNetwork()
+mlp.add_layer(Layer(25, 30, 'tanh'))
+mlp.add_layer(Layer(30, 20, 'sigmoid'))
+mlp.add_layer(Layer(20, 1, 'tanh'))
+
+mlp2 = NN(0.1, 50)
+mlp2.new_layer({'input_size': 25, 'number_of_nodes': 20, 'activation_function': 'tanh'})
+mlp2.new_layer({'input_size': 20, 'number_of_nodes': 15, 'activation_function': 'sigmoid'})
+mlp2.new_layer({'input_size': 15, 'number_of_nodes': 5, 'activation_function': 'sigmoid'})
+mlp2.new_layer({'input_size': 5, 'number_of_nodes': 1, 'activation_function': 'tanh'})
+mlp2.train(XTrain, yTrain)
+# mse = mlp.train(XTrain, yTrain, 0.01, 100)
+
+plt.plot(mlp2.mse_score)
+# plt.plot(mse)
 plt.title('Changes in MSE')
 plt.xlabel('Epoch (every 10th)')
 plt.ylabel('MSE')

@@ -1,8 +1,9 @@
 import numpy as np
 
-#from scipy.special import expit as sigmoid
-def sigmoid (x):
-    return np.exp(x) / (np.exp(x) + 1)
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
 
 def replaceZeroes(data):
     min_nonzero = np.min(data[np.nonzero(data)])
@@ -11,7 +12,7 @@ def replaceZeroes(data):
 
 
 class LogisticRegression:
-    def __init__(self, lr=0.01, max_iter=1000, epsilon=1e-8):
+    def __init__(self, lr=0.1, max_iter=1000, epsilon=0):
         self.lr = lr
         self.max_iter = max_iter
         self.beta = None
@@ -30,7 +31,7 @@ class LogisticRegression:
 
     def gradient(self, x_train, y_train):
         # Calculates the gradient of decent
-        return np.dot(x_train.T, (self.prob(x_train) - y_train))
+        return np.dot(x_train.T, (self.prob(x_train) - y_train)) / len(x_train)
 
     def train(self, x_train, y_train, x_valid, y_valid):
         self.beta = np.random.rand(x_train.shape[1], 1)

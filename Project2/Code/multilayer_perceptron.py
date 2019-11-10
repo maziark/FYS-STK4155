@@ -1,13 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import random
-
-
-# np.random.seed(1340)
+from sklearn.utils import shuffle
 
 
 def activation_sigmoid(values):
-    return 1.0 / (1 + np.exp(values))
+    return 1.0 / (1.0 + np.exp(-values))
 
 
 def der_activation_sigmoid(values):
@@ -27,7 +23,7 @@ def activation_tanh(values):
 
 
 def der_activation_tanh(values):
-    return 1. / (np.cosh(values) ** 2)
+    return 1. - values ** 2
 
 
 def MSE(x, x_):
@@ -39,140 +35,121 @@ def MSE(x, x_):
 
         returns a double
     """
-    return np.average((x - x_) ** 2)
+    return np.mean(np.square(x - x_))
 
 
 class Layer:
-    def __init__(self, input_size, node_size, weights_initial=None, bias=None, activation='sigmoid'):
-        self.next = None
+    def __init__(self, input_size, node_size, activation='sigmoid'):
+        # Statistics
+        self.result = None
         self.error = None
         self.delta = None
+        self.last_value = None
+
+        # Features
         self.number_of_inputs = input_size
         self.number_of_nodes = node_size
-        self.betas = weights_initial
         self.activation = activation
-        if weights_initial is None:
-            self.betas = np.random.rand(input_size, node_size)
 
-        self.bias = bias
-        if bias is None:
-            self.bias = np.random.rand(node_size)
+        # Values
+        self.bias = np.random.rand(node_size)
+        self.betas = np.random.rand(input_size, node_size)
 
     def forward(self, values):
         tmp = np.dot(values, self.betas) + self.bias
-        self.next = eval('activation_{}({})'.format(self.activation, tmp))
-        return self.next
+        self.result = self.activate(tmp)
+        return self.result
 
-    def backward(self, values):
-        return eval('der_activation_{}({})'.format(self.activation, values))
+    def activate(self, value):
+        # sigmoid:
+        if 'sig' in self.activation:
+            return activation_sigmoid(value)
+
+        # tanh
+        elif 'tanh' in self.activation:
+            return activation_tanh(value)
+
+        # linear
+        else:
+            return value
+
+    def backward(self, value):
+        # sigmoid:
+        if 'sig' in self.activation:
+            return der_activation_sigmoid(value)
+
+        # tanh
+        elif 'tanh' in self.activation:
+            return der_activation_tanh(value)
+
+        # linear
+        else:
+            return value
 
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, learning_rate, epsilon=0):
-        self.epsilon = epsilon
+    def __init__(self, learning_rate=0.01, max_iter=100, epsilon=0):
+        # design:
+        self.mse_score = []
         self.layers = []
-        self.hidden_layers = hidden_layers
+
+        # early stopping
+        self.epsilon = epsilon
+        self.max_iter = max_iter
         self.eta = learning_rate
 
-    def run(self, X, Y, X_test, Y_test, iter=20):
-        tmp_layers = []
-        tmp_error = []
+    def new_layer(self, design):
+        self.layers.append(Layer(design['input_size'], design['number_of_nodes'], design['activation_function']))
 
-        for i in range(iter):
-            self.layers = self.design(self.hidden_layers)
-            tmp_error.append(self.iterate(X, Y, X_test, Y_test))
-            tmp_layers.append(self.layers)
-        self.layers = tmp_layers[np.array(tmp_error).argmin()]
-        return tmp_error
-
-    def design(self, hidden_layers):
-        layers = []
-        for i in range(1, len(hidden_layers)):
-            layers.append(Layer(hidden_layers[i - 1], hidden_layers[i]))
-        return layers
-
-    def forward(self, values):
+    def forward(self, x_train):
+        next_input = x_train
         for layer in self.layers:
-            values = layer.forward(values)
+            next_input = layer.forward(next_input)
 
-        return values
+        return next_input
 
-    def backpropagation(self, X, Y):
-        pred = self.forward(X)
+    def predict(self, x):
+        result = self.forward(x)
 
-        # First dealing with the last layer:
-        tmp = self.layers[-1]
-        tmp.error = Y - pred  # tmp.next
-        tmp.delta = tmp.error * tmp.backward(tmp.next)
+        if result.ndim == 1:
+            return np.argmax(result)
 
-        for i in range(len(self.layers) - 2, -1, -1):
-            current_layer = self.layers[i]
-            next_layer = self.layers[i + 1]
+        else:
+            return np.argmax(result, axis=1)
 
-            current_layer.error = np.dot(next_layer.betas, next_layer.delta)
-            current_layer.delta = current_layer.error * current_layer.backward(current_layer.next)
+    def backward(self, x_train, y_train):
+        result = self.forward(x_train)
+        number_layers = len(self.layers)
+        for i in reversed(range(number_layers)):
+            if self.layers[i] == self.layers[-1]:
+                self.layers[i].error = y_train - result
+                self.layers[i].delta = self.layers[i].error * self.layers[i].backward(result)
 
-        # improve
-        for layer in self.layers:
-            if layer == self.layers[0]:
-                current_input = np.atleast_2d(X)
-            # print(self.eta, layer.delta.shape, current_input.T.shape, layer.betas.shape)
-            layer.betas += layer.delta * current_input.T * self.eta
-            current_input = np.atleast_2d(layer.next)
+            else:
+                # weighted error
+                self.layers[i].error = np.dot(self.layers[i + 1].betas, self.layers[i + 1].delta)
+                self.layers[i].delta = self.layers[i].error * self.layers[i].backward(self.layers[i].result)
 
-    def iterate(self, X, Y, X_test, Y_test, max_iter=1000):
-        count_iter = 0
-        error = [float('inf')]
-        order = list(range(0, len(X)))
-        while max_iter > count_iter:
-            count_iter += 1
-            random.shuffle(order)
+        for i in range(number_layers):
+            if i == 0:
+                tmp_x = x_train
+            else:
+                tmp_x = self.layers[i - 1].result
 
-            for j in order:
-                self.backpropagation(np.array(X[j]), np.array(Y[j]))
+            tmp_x = np.atleast_2d(tmp_x)
+            self.layers[i].betas += self.layers[i].delta * tmp_x.T * self.eta
 
-            output = [self.forward(np.array(x)) for x in X_test]
-            error.append(0.5 * sum([sum(output[i] - Y_test[i]) ** 2.0 for i in range(len(Y_test))]))
-            if error[-1] > error[-2]:
+    def train(self, x_train, y_train):
+
+        for i in range(self.max_iter):
+            tmp_x_train, tmp_y_train = shuffle(x_train, y_train, random_state=0)
+            n_train = len(tmp_x_train)
+            n_valid = int(n_train / 5)
+            x_valid, y_valid = tmp_x_train[:n_valid], tmp_y_train[:n_valid]
+            for x in range(n_train):
+                self.backward(tmp_x_train[x], tmp_y_train[x])
+
+            self.mse_score.append(MSE(y_valid, self.forward(x_valid)))
+
+            if i > 10 and abs(self.mse_score[-1] - self.mse_score[-2]) <= self.epsilon:
                 break
-
-        return error
-
-    def predict(self, X):
-        single_flag = False
-        if not isinstance(X, list):
-            X = [X]
-            single_flag = True
-
-        result = []
-        for x in X:
-            pred = self.forward(np.array(x))
-            result.append(np.argmax(pred))
-        if single_flag:
-            result = result[0]
-
-        return result
-
-    def confusion_matrix(self, X, Y):
-        confused_matrix = np.zeros((Y.shape[1], Y.shape[1]))
-        for i in range(len(X)):
-            actual = np.argmax(Y[i])
-            predicted = self.predict(np.array(X[i]))
-
-            confused_matrix[predicted][actual] += 1
-
-        print(confused_matrix)
-
-
-'''X = [[0, 0], [0, 1], [1, 0], [1, 1]]
-Y = [[1, 0], [1, 0], [1, 0], [0, 1]]
-mlp = NeuralNetwork([2, 3, 2], 0.001)
-mse = mlp.iterate(X, Y)
-
-
-
-plt.plot(mse)
-plt.title('Changes in MSE')
-plt.xlabel('Epoch (every 10th)')
-plt.ylabel('MSE')
-plt.show()'''
