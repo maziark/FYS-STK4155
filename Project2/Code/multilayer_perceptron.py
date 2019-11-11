@@ -38,6 +38,12 @@ def MSE(x, x_):
     return np.mean(np.square(x - x_))
 
 
+def R2(x_, x):
+    # expected, predicted
+    r2 = 1 - MSE(x, x_) / MSE(np.average(x_), x)
+    return r2
+
+
 class Layer:
     """
     Each Layer works as a seperate object, it has the number of inputs,
@@ -52,6 +58,7 @@ class Layer:
     Each Layer will keep track of its error rate, and delta (which are used
     to help with finding the required changes in the same iteration)
     """
+
     def __init__(self, input_size, node_size, activation='sigmoid'):
         # Statistics
         self.result = None
@@ -114,6 +121,7 @@ class Layer:
 class NeuralNetwork:
     def __init__(self, learning_rate=0.01, max_iter=100, epsilon=0):
         # design:
+        self.R2_score = []
         self.mse_score = []
         self.layers = []
 
@@ -189,7 +197,7 @@ class NeuralNetwork:
             tmp_x = np.atleast_2d(tmp_x)
             self.layers[i].betas += self.layers[i].delta * tmp_x.T * self.eta
 
-    def train(self, x_train, y_train):
+    def train(self, x_train, y_train, mse_off=False):
         """
         :param x_train: input values
         :param y_train: expected outcome
@@ -200,7 +208,6 @@ class NeuralNetwork:
 
         If the tolerance rate is set, it can end before going through all the iterations.
         """
-
         for i in range(self.max_iter):
             tmp_x_train, tmp_y_train = shuffle(x_train, y_train, random_state=0)
             n_train = len(tmp_x_train)
@@ -209,12 +216,14 @@ class NeuralNetwork:
             for x in range(n_train):
                 self.backward(tmp_x_train[x], tmp_y_train[x])
 
-            self.mse_score.append(MSE(y_valid, self.forward(x_valid)))
+            if not mse_off:
+                valid_result = self.forward(x_valid)
+                self.mse_score.append(MSE(y_valid, valid_result))
+                self.R2_score.append(R2(y_valid, valid_result))
 
-            if i > 10 and abs(self.mse_score[-1] - self.mse_score[-2]) <= self.epsilon:
-                break
+                if i > 10 and abs(self.mse_score[-1] - self.mse_score[-2]) <= self.epsilon:
+                    break
 
     def accuracy(self, x_test, y_test):
         result = self.forward(x_test) > 0.5
         return np.sum(result == y_test) / len(y_test)
-

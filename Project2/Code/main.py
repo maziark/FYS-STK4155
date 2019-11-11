@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from Project2.Code.logistic_regression import LogisticRegression as LR
 
 # Trying to set the seed
-from Project2.Code.neural_network import NeuralNetwork, Layer
 from Project2.Code.multilayer_perceptron import NeuralNetwork as NN
 
 np.random.seed(0)
