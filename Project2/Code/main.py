@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import matplotlib.pyplot as plt
 from Project2.Code.logistic_regression import LogisticRegression as LR
 
+
 # Trying to set the seed
 from Project2.Code.multilayer_perceptron import NeuralNetwork as NN
 
@@ -26,6 +27,7 @@ df = pd.read_excel(filename, header=1, skiprows=0, index_col=0, na_values=nanDic
 
 df.rename(index=str, columns={"default payment next month": "defaultPaymentNextMonth"}, inplace=True)
 # Remove instances with zeros only for past bill statements or paid amounts
+print(df.shape)
 df = df.drop(df[(df.BILL_AMT1 == 0) &
                 (df.BILL_AMT2 == 0) &
                 (df.BILL_AMT3 == 0) &
@@ -59,6 +61,8 @@ df = df.drop(df[(df.MARRIAGE != 1) &
 df = df.drop(df[(df.defaultPaymentNextMonth != 0) &
                 (df.defaultPaymentNextMonth != 1)].index)
 
+print(df.shape)
+
 # Features and targets
 X = df.loc[:, df.columns != 'defaultPaymentNextMonth'].values
 y = df.loc[:, df.columns == 'defaultPaymentNextMonth'].values
@@ -85,7 +89,7 @@ XTrain = sc.fit_transform(XTrain)
 XTest = sc.transform(XTest)
 
 # One-hot's of the target vector
-Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(yTrain), onehotencoder.fit_transform(yTest)
+Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(yTrain).toarray(), onehotencoder.fit_transform(yTest).toarray()
 
 lambdas = np.logspace(-5, 7, 13)
 parameters = [{'C': 1. / lambdas, "solver": ["lbfgs"]}]  # *len(parameters)}]
@@ -94,17 +98,15 @@ logReg = LogisticRegression()
 # TRain
 logReg.fit(XTrain, yTrain)
 myLR = LR()
+#myLR.train(XTrain, yTrain, XTest, yTest)
+
 print(logReg.score(XTest, yTest))
+
 # myLR.train(XTrain, yTrain.reshape(-1, 1), XTest, yTest.reshape(-1, 1))
 print("hello")
 # gridSearch = GridSearchCV(logReg, parameters, cv=5, scoring=scoring, refit='roc_auc')
 
-mlp = NeuralNetwork()
-mlp.add_layer(Layer(25, 30, 'tanh'))
-mlp.add_layer(Layer(30, 20, 'sigmoid'))
-mlp.add_layer(Layer(20, 1, 'tanh'))
-
-mlp2 = NN(0.1, 50)
+mlp2 = NN(0.1, 100)
 mlp2.new_layer({'input_size': 25, 'number_of_nodes': 20, 'activation_function': 'tanh'})
 mlp2.new_layer({'input_size': 20, 'number_of_nodes': 15, 'activation_function': 'sigmoid'})
 mlp2.new_layer({'input_size': 15, 'number_of_nodes': 5, 'activation_function': 'sigmoid'})

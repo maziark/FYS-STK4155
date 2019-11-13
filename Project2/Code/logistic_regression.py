@@ -2,7 +2,19 @@ import numpy as np
 
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    a = np.exp(-x)
+    return 1 / (1.0 + a)
+
+def MSE(x, x_):
+    """
+        Calculating the Mean Square Error.
+        Argument (numpy array x, and \tilde{x})
+
+        here x_ can either an array, or a constant.
+
+        returns a double
+    """
+    return np.mean(np.square(x - x_))
 
 
 def replaceZeroes(data):
@@ -12,12 +24,13 @@ def replaceZeroes(data):
 
 
 class LogisticRegression:
-    def __init__(self, lr=0.1, max_iter=1000, epsilon=0):
+    def __init__(self, lr=0.1, max_iter=100, epsilon=0):
         self.lr = lr
         self.max_iter = max_iter
         self.beta = None
         self.epsilon = epsilon
         self.cost_values = []
+        self.mse_score = []
 
     def prob(self, x):
         return sigmoid(np.dot(x, self.beta))
@@ -31,12 +44,13 @@ class LogisticRegression:
 
     def gradient(self, x_train, y_train):
         # Calculates the gradient of decent
-        return np.dot(x_train.T, (self.prob(x_train) - y_train)) / len(x_train)
+        return -x_train.T @ (y_train - self.prob(x_train))
 
-    def train(self, x_train, y_train, x_valid, y_valid):
+    def train(self, x_train, y_train, x_valid=[], y_valid=[]):
         self.beta = np.random.rand(x_train.shape[1], 1)
         for i in range(self.max_iter):
-            self.cost_values.append(self.cost_function(x_train, y_train))
+            self.cost_values.append(self.gradient(x_train, y_train))
+            self.mse_score.append(MSE(self.predict(x_train), y_train))
 
             change = self.lr * self.gradient(x_train, y_train)
 

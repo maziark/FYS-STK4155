@@ -114,6 +114,7 @@ def compare_OLS_NN():
     plt.legend()
     plt.show()
 
+
 def main():
     compare_OLS_NN()
 
