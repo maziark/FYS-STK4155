@@ -43,13 +43,13 @@ metadata.shape -> (71, 41)
 metadata = pd.read_csv(metadata_path, delimiter='\s+', encoding='utf-8')
 
 corr_list = []
-
-for i in metadata.columns:
+first, last = 18, 28
+for i in metadata.columns[first: last]:
     corr_list.append([])
-    for j in metadata.columns:
+    for j in metadata.columns[first: last]:
         corr_list[-1].append(metadata[i].corr(metadata[j]))
 
-metadata_std = [x.std() for x in metadata.values.T]
+metadata_std = [x.std() for x in metadata.values.T[first: last]]
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
