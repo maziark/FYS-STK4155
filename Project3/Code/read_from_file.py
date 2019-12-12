@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 
-
 # Trying to set the seed
 np.random.seed(0)
 random.seed(0)
@@ -41,15 +40,11 @@ df.values (values)
 metadata.shape -> (71, 41)
 """
 metadata = pd.read_csv(metadata_path, delimiter='\s+', encoding='utf-8')
-
-corr_list = []
-first, last = 18, 28
-for i in metadata.columns[first: last]:
-    corr_list.append([])
-    for j in metadata.columns[first: last]:
-        corr_list[-1].append(metadata[i].corr(metadata[j]))
-
+first, last = 3, -1
 metadata_std = [x.std() for x in metadata.values.T[first: last]]
+metadata_col = list(metadata.columns)
+
+metadata_col_sorted = [x for _, x in sorted(zip(metadata_std, metadata_col))]
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
@@ -57,5 +52,20 @@ ax.plot(metadata_std, label='std')
 ax.set_title('std values of metadata of each feature')
 plt.show()
 
+corr_list = []
+
+for i in metadata_col_sorted[:10]:
+    corr_list.append([])
+    for j in metadata_col_sorted[:10]:
+        corr_list[-1].append(metadata.get(i).corr(metadata.get(j)))
+
 heat_map = sb.heatmap(corr_list)
 plt.show()
+
+# The ones we should consider:
+
+l = ["Latitude", "Longitude", "Altitude", "Area", "Depth", "Temperature", "Secchi", "O2", "CH4", "pH", "TIC", "SiO2", "KdPAR"]
+
+toDrop = [x for x in metadata.columns if x not in l]
+metadata = metadata.drop(toDrop, axis=1)
+
