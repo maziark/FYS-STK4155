@@ -89,12 +89,31 @@ def prepare_data(population_data, metadata):
     # err = round(np.mean(errors), 2)
 
     for i in range(13):
-        print(metadata.columns[i],  MSE(test_y.T[i], predictions[i]))
-
+        print(metadata.columns[i], MSE(test_y.T[i], predictions[i]))
 
     return predictions, test_y
     # print("observation", MSE(predictions.T[0], test_y[0]))
 
+
+def get_bioms():
+    """
+    To get the bioms that are in the mid 20% (to be or not to be)
+    :return:
+    """
+    cwd = os.getcwd()
+    population_path = cwd + '/../Data/ASV_table.tsv'
+
+    pop_bions = pd.read_csv(population_path, delimiter='\s+', encoding='utf-8')
+
+    to_keep = []
+    for i in pop_bions.columns:
+        c = 0
+        for j in pop_bions.get(i):
+            if j > 2:
+                c += 1
+        if 0.6 > c / 72 > 0.4:
+            to_keep.append(i)
+    return to_keep
 
 population_size, metadata = read_data()
 predictions, test_y = prepare_data(population_size, metadata)
