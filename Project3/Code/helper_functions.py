@@ -3,13 +3,24 @@ import random
 
 import numpy as np
 import pandas as pd
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
+
 from sklearn.metrics import mean_squared_error as MSE
 
 # Trying to set the seed
 np.random.seed(0)
 random.seed(0)
+
+
+def accuracy(x_1, x_2):
+    conf = [[0, 0], [0, 0]]
+    for i, j in zip(x_1, x_2):
+        conf[i][j] += 1
+
+    print(conf, (conf[0][0] + conf[1][1])/len(x_1))
 
 
 def get_std(pandas_object):
@@ -103,18 +114,47 @@ def get_bioms():
     cwd = os.getcwd()
     population_path = cwd + '/../Data/ASV_table.tsv'
 
-    pop_bions = pd.read_csv(population_path, delimiter='\s+', encoding='utf-8')
+    pop_bioms = pd.read_csv(population_path, delimiter='\s+', encoding='utf-8')
 
     to_keep = []
-    for i in pop_bions.columns:
+    for i in pop_bioms.columns:
         c = 0
-        for j in pop_bions.get(i):
+        for j in pop_bioms.get(i):
             if j > 2:
                 c += 1
         if 0.6 > c / 72 > 0.4:
             to_keep.append(i)
-    return to_keep
+
+    to_drop = [x for x in pop_bioms.columns if x not in to_keep]
+    pop_bioms = pop_bioms.drop(to_drop, axis=1)
+    return pop_bioms
 
 
-population_size, metadata = read_data()
-predictions, test_y = prepare_data(population_size, metadata)
+def predict_exist():
+    bioms = get_bioms()
+    _, metadata = read_data()
+
+    bioms_array = (np.array(bioms.values) > 0) * 1
+    metadata_array = np.array(metadata.values)
+
+    train_x, test_x, train_y, test_y = train_test_split(metadata_array, bioms_array, test_size=0.30)
+
+    print("train_x size:", train_x.shape, " train_y size:", train_y.shape, train_y.T[0].shape)
+
+    clfs = []
+    scores = []
+    for i in range(bioms_array.shape[1]):
+        clf = RandomForestClassifier(max_depth=100, random_state=50)
+        clf.fit(train_x, train_y.T[i])
+        print(clf.predict(test_x))
+        scores.append(clf.score(test_x, test_y.T[i]))
+        print(scores[-1])
+        print(accuracy(test_y.T[i], clf.predict(test_x)))
+        clfs.append(clf)
+
+    return clf, scores
+
+
+# population_size, metadata = read_data()
+# predictions, test_y = prepare_data(population_size, metadata)
+clfs, scores = predict_exist()
