@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -143,18 +144,26 @@ def predict_exist():
 
     clfs = []
     scores = []
-    for i in range(bioms_array.shape[1]):
-        clf = RandomForestClassifier(max_depth=100, random_state=50)
-        clf.fit(train_x, train_y.T[i])
-        print(clf.predict(test_x))
-        scores.append(clf.score(test_x, test_y.T[i]))
-        print(scores[-1])
-        print(accuracy(test_y.T[i], clf.predict(test_x)))
-        clfs.append(clf)
+    for j in [0, 20, 40, 60, 80]:
+        clfs.append([])
+        scores.append([])
+        for i in range(bioms_array.shape[1]):
+            clf = RandomForestClassifier(max_depth=100, random_state=j)
+            clf.fit(train_x, train_y.T[i])
+            print(clf.predict(test_x))
+            scores[-1].append(clf.score(test_x, test_y.T[i]))
+            print(scores[-1][-1])
+            print(accuracy(test_y.T[i], clf.predict(test_x)))
+            clfs[-1].append(clf)
 
-    return clf, scores
+    return clfs, scores
 
 
 # population_size, metadata = read_data()
 # predictions, test_y = prepare_data(population_size, metadata)
 clfs, scores = predict_exist()
+for score in scores:
+    score = (np.array(score) > 0.5) * 1
+    t = list(range(len(scores[0])))
+    plt.plot(score)
+plt.show()
