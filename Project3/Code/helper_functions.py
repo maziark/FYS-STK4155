@@ -8,12 +8,16 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import RandomForestClassifier
-
 from sklearn.metrics import mean_squared_error as MSE
 
+from Project3.Code.siamese_good import X_train as X_train_siamese
+from Project3.Code.siamese_good import X_test as X_test_siamese
+from Project3.Code.siamese_good import y_train as y_train_siamese
+from Project3.Code.siamese_good import y_test as y_test_siamese
+from Project3.Code.siamese_good import set_category
+
+
 # Trying to set the seed
-np.random.seed(0)
-random.seed(0)
 
 
 def accuracy(x_1, x_2):
@@ -21,7 +25,7 @@ def accuracy(x_1, x_2):
     for i, j in zip(x_1, x_2):
         conf[i][j] += 1
 
-    print(conf, (conf[0][0] + conf[1][1])/len(x_1))
+    print(conf, (conf[0][0] + conf[1][1]) / len(x_1))
 
 
 def get_std(pandas_object):
@@ -68,7 +72,8 @@ def read_data():
     """
     metadata = pd.read_csv(metadata_path, delimiter='\s+', encoding='utf-8')
 
-    l = ["Latitude", "Longitude", "Altitude", "Area", "Depth", "Temperature", "Secchi", "O2", "CH4", "pH", "TIC",
+    # l = ["Latitude", "Longitude", "Altitude", "Area",
+    l = ["Temperature", "Secchi", "O2", "CH4", "pH", "TIC",
          "SiO2", "KdPAR"]
 
     toDrop = [x for x in metadata.columns if x not in l]
@@ -143,27 +148,55 @@ def predict_exist():
     print("train_x size:", train_x.shape, " train_y size:", train_y.shape, train_y.T[0].shape)
 
     clfs = []
-    scores = []
-    for j in [0, 20, 40, 60, 80]:
+    scores_test = []
+    scores_train = []
+    for j in range(2, 10):
         clfs.append([])
-        scores.append([])
+        scores_test.append([])
+        scores_train.append([])
         for i in range(bioms_array.shape[1]):
-            clf = RandomForestClassifier(max_depth=100, random_state=j)
+            print("n_estimators : ", j * 10)
+            clf = RandomForestClassifier(max_depth=j, random_state=50, n_estimators=40)
             clf.fit(train_x, train_y.T[i])
-            print(clf.predict(test_x))
-            scores[-1].append(clf.score(test_x, test_y.T[i]))
-            print(scores[-1][-1])
-            print(accuracy(test_y.T[i], clf.predict(test_x)))
+            # rint(clf.predict(test_x))
+            scores_test[-1].append(clf.score(test_x, test_y.T[i]))
+            scores_train[-1].append(clf.score(train_x, train_y.T[i]))
+            # print(scores[-1][-1])
+            # print(accuracy(test_y.T[i], clf.predict(test_x)))
             clfs[-1].append(clf)
 
-    return clfs, scores
+    return clfs, scores_test, scores_train
+
+
+def predict_t():
+    _, metadata = read_data()
+
+    train_y, test_y = set_category(np.array(metadata.get('Temperature')),
+                                   np.array(y_train_siamese), np.array(y_test_siamese))
+
+    train_x, test_x = X_train_siamese, X_test_siamese
+
+    print("train_x size:", train_x.shape, " train_y size:", train_y.shape, train_y.T[0].shape)
+
+    clfs = []
+    scores_test = []
+    scores_train = []
+    for j in range(2, 10):
+        print("max_depth : ", j * 10)
+        clf = RandomForestClassifier(max_depth=j, random_state=50, n_estimators=40)
+        clf.fit(train_x, train_y.T)
+        # rint(clf.predict(test_x))
+        scores_test.append(clf.score(test_x, test_y.T))
+        scores_train.append(clf.score(train_x, train_y.T))
+        # print(scores[-1][-1])
+        # print(accuracy(test_y.T[i], clf.predict(test_x)))
+        clfs.append(clf)
+
+    return clfs, scores_test, scores_train
 
 
 # population_size, metadata = read_data()
 # predictions, test_y = prepare_data(population_size, metadata)
-clfs, scores = predict_exist()
-for score in scores:
-    score = (np.array(score) > 0.5) * 1
-    t = list(range(len(scores[0])))
-    plt.plot(score)
-plt.show()
+# clfs, scores_test, scores_train = predict_exist()
+
+clfs, scores_test, scores_train = predict_t()
