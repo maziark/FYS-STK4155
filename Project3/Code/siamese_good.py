@@ -106,7 +106,7 @@ def make_anchored_pairs(data, target, test_data, test_target, anch):
             print(len(labels))
         for index in range(len(test_data)):
             x2 = test_data[index]
-            test_labels += [1] if target[index] == i else [0]
+            test_labels += [1] if test_target[index] == i else [0]
             test_pairs += [[x1, x2]]
 
     return np.array(pairs), np.array(labels), np.array(test_pairs), np.array(
@@ -127,7 +127,7 @@ y = tp
 X = data.to_numpy()
 # y = to_categorical(y, num_classes=None)
 # Split into training and testing
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.7)
 y_train_l, y_test_l = set_category(y, y_train, y_test)
 # Make pairs and labels
 # pairs_train, labels_train = make_pairs(X_train,y_train)
