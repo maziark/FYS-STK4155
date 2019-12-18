@@ -196,8 +196,29 @@ def predict_t():
     return clfs, scores_test, scores_train
 
 
-population_size, metadata = read_data(False, False)
-predictions, test_y, ML_ = prepare_data(population_size, metadata)
+def predict_all_metadata(population_size, metadata, ML_):
+    x_values = np.array(population_size.values)
+    y_value = np.array(metadata.values)
+
+    predictions = np.zeros((y_value.shape[1], y_value.shape[0]))
+
+    for i in range(len(metadata.columns)):
+        predictions[i] = ML_[i].predict(x_values)
+
+    print(predictions.shape)
+
+    # errors = abs(pred - test_y.T[i])
+    # err = round(np.mean(errors), 2)
+
+    return predictions
+
+# Laurent
+#population_size, metadata = read_data(False, False)
+#predictions, test_y, ML_ = prepare_data(population_size, metadata)
+
+#all_predictions = predict_all_metadata(population_size, metadata, ML_)
+
+
 # clfs, scores_test, scores_train = predict_exist()
 
-#clfs, scores_test, scores_train = predict_t()
+# clfs, scores_test, scores_train = predict_t()

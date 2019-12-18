@@ -76,7 +76,8 @@ def set_category(data, train=None, test=None):
     # of numpy returns an array with 1,2,3....n as labels for each of n
     # bins. The min, max cut off are  chosen to be larger/smaller than
     # max min values of the data
-    bins = np.array([0, data.mean(), 100])
+    bins = np.array([0, data.median(), 100])
+    print("bins", bins)
 
     if train is None:
         temp = np.digitize(data, bins)
@@ -127,7 +128,7 @@ y = tp
 X = data.to_numpy()
 # y = to_categorical(y, num_classes=None)
 # Split into training and testing
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.7)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
 y_train_l, y_test_l = set_category(y, y_train, y_test)
 # Make pairs and labels
 # pairs_train, labels_train = make_pairs(X_train,y_train)
