@@ -12,8 +12,8 @@ from sklearn.metrics import mean_squared_error as MSE
 
 from Project3.Code.siamese_good import X_train as X_train_siamese
 from Project3.Code.siamese_good import X_test as X_test_siamese
-from Project3.Code.siamese_good import y_train as y_train_siamese
-from Project3.Code.siamese_good import y_test as y_test_siamese
+from Project3.Code.siamese_good import y_train_l as y_train_siamese
+from Project3.Code.siamese_good import y_test_l as y_test_siamese
 from Project3.Code.siamese_good import set_category
 
 
@@ -48,7 +48,7 @@ def get_corr(pandas_object, list_of_features=[]):
     return corr_list
 
 
-def read_data():
+def read_data(pop_bool=True, metadata_bool=True):
     # Reading file into data frame
     cwd = os.getcwd()
     population_path = cwd + '/../Data/ASV_table.tsv'
@@ -61,10 +61,11 @@ def read_data():
     """
     population_size = pd.read_csv(population_path, delimiter='\s+', encoding='utf-8')
 
-    # find the non-zero bioms
-    population_to_drop = [x for x in population_size.columns if population_size.get(x).min() == 0]
-    population_size = population_size.drop(population_to_drop, axis=1)
-    """
+    if pop_bool:
+        # find the non-zero bioms
+        population_to_drop = [x for x in population_size.columns if population_size.get(x).min() == 0]
+        population_size = population_size.drop(population_to_drop, axis=1)
+        """
     df.columns (properties)
     df.values (values)
     
@@ -73,11 +74,12 @@ def read_data():
     metadata = pd.read_csv(metadata_path, delimiter='\s+', encoding='utf-8')
 
     # l = ["Latitude", "Longitude", "Altitude", "Area",
-    l = ["Temperature", "Secchi", "O2", "CH4", "pH", "TIC",
-         "SiO2", "KdPAR"]
+    if metadata_bool:
+        l = ["Temperature", "Secchi", "O2", "CH4", "pH", "TIC",
+             "SiO2", "KdPAR"]
 
-    toDrop = [x for x in metadata.columns if x not in l]
-    metadata = metadata.drop(toDrop, axis=1)
+        toDrop = [x for x in metadata.columns if x not in l]
+        metadata = metadata.drop(toDrop, axis=1)
 
     return population_size, metadata
 
@@ -94,7 +96,8 @@ def prepare_data(population_data, metadata):
     predictions = np.zeros((test_y.shape[1], test_y.shape[0]))
     ML_ = []
     for i in range(len(metadata.columns)):
-        rf = RandomForestRegressor(n_estimators=1000, random_state=50)
+        print(i)
+        rf = RandomForestRegressor(n_estimators=100, random_state=50)
         rf.fit(train_x, train_y.T[i])
 
         ML_.append(rf)
@@ -105,10 +108,10 @@ def prepare_data(population_data, metadata):
     # errors = abs(pred - test_y.T[i])
     # err = round(np.mean(errors), 2)
 
-    for i in range(13):
+    for i in range(len(metadata.columns)):
         print(metadata.columns[i], MSE(test_y.T[i], predictions[i]))
 
-    return predictions, test_y
+    return predictions, test_y, ML_
     # print("observation", MSE(predictions.T[0], test_y[0]))
 
 
@@ -171,9 +174,7 @@ def predict_exist():
 def predict_t():
     _, metadata = read_data()
 
-    train_y, test_y = set_category(np.array(metadata.get('Temperature')),
-                                   np.array(y_train_siamese), np.array(y_test_siamese))
-
+    train_y, test_y = y_train_siamese, y_test_siamese
     train_x, test_x = X_train_siamese, X_test_siamese
 
     print("train_x size:", train_x.shape, " train_y size:", train_y.shape, train_y.T[0].shape)
@@ -183,7 +184,7 @@ def predict_t():
     scores_train = []
     for j in range(2, 10):
         print("max_depth : ", j * 10)
-        clf = RandomForestClassifier(max_depth=j, random_state=50, n_estimators=40)
+        clf = RandomForestClassifier(max_depth=j, random_state=50, n_estimators=100)
         clf.fit(train_x, train_y.T)
         # rint(clf.predict(test_x))
         scores_test.append(clf.score(test_x, test_y.T))
@@ -195,8 +196,8 @@ def predict_t():
     return clfs, scores_test, scores_train
 
 
-# population_size, metadata = read_data()
-# predictions, test_y = prepare_data(population_size, metadata)
+population_size, metadata = read_data(False, False)
+predictions, test_y, ML_ = prepare_data(population_size, metadata)
 # clfs, scores_test, scores_train = predict_exist()
 
-clfs, scores_test, scores_train = predict_t()
+#clfs, scores_test, scores_train = predict_t()
