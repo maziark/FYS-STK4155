@@ -171,11 +171,14 @@ def predict_exist():
     return clfs, scores_test, scores_train
 
 
-def predict_t():
+def predict_t(X_train=None, X_test=None, y_train=None, y_test=None):
     _, metadata = read_data()
-
-    train_y, test_y = y_train_siamese, y_test_siamese
-    train_x, test_x = X_train_siamese, X_test_siamese
+    if X_train is None or X_test is None:
+        train_y, test_y = y_train_siamese, y_test_siamese
+        train_x, test_x = X_train_siamese, X_test_siamese
+    else:
+        train_y, test_y = y_train, y_test
+        train_x, test_x = X_train, X_test
 
     print("train_x size:", train_x.shape, " train_y size:", train_y.shape, train_y.T[0].shape)
 
@@ -221,4 +224,4 @@ def predict_all_metadata(population_size, metadata, ML_):
 
 # clfs, scores_test, scores_train = predict_exist()
 
-# clfs, scores_test, scores_train = predict_t()
+clfs, scores_test, scores_train = predict_t()
